@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html><head>
+<meta http-equiv="content-type" content="text/html; charset=utf-8">
+<title>Parabolic finite difference with WebGL</title>
+<link rel="stylesheet" href="style.css" />
+
+<script src="webgl-debug.js"></script>
+<script src="jquery.js"></script>
+<script src="vector.js"></script>
+<script src="solver.js"></script>
+
+<script>
+$(function() {
+    
+    $('#main-canvas').mousemove(function(e) {
+            var el = $(this);
+            var parentOffset = el.offset();
+            var relX = 2 * (e.pageX - parentOffset.left) / el.width() - 1;
+            var relY = 2 * (e.pageY - parentOffset.top) / el.height() - 1;
+            console.log(relX + ',' + relY);
+            
+            Solver.setLight(relX, -relY, 1);
+        }
+    );
+
+    Solver.webGLStart({
+        size: 512,
+        computation: 'stefan',
+        display: 'twophase',
+    });
+});
+</script>
+</head>
+<body>
+<canvas id="main-canvas" style="border: none;" width="512" height="512"></canvas>
+<p id="framerate"></p>
+</body>
+</html>
