@@ -17,12 +17,23 @@ $(function() {
             var parentOffset = el.offset();
             var relX = 2 * (e.pageX - parentOffset.left) / el.width() - 1;
             var relY = 2 * (e.pageY - parentOffset.top) / el.height() - 1;
-            console.log(relX + ',' + relY);
             
             Solver.setLight(relX, -relY, 1);
         }
     );
 
+    $('#save-button').click(function() {
+        var canvas = document.getElementById('main-canvas');
+        var image = canvas.toDataURL('image/png');
+        
+        $.ajax({
+            type: 'POST',
+            url: 'http://localhost:8080/test.png',
+            data: image,
+            dataType: 'text'
+        });
+    });
+    
     Solver.webGLStart({
         size: 512,
         computation: 'stefan',
@@ -32,6 +43,7 @@ $(function() {
 </script>
 </head>
 <body>
+<button id="save-button">Save image</button>
 <canvas id="main-canvas" style="border: none;" width="512" height="512"></canvas>
 <p id="framerate"></p>
 </body>
