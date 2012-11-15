@@ -1,34 +1,6 @@
 "use strict";
 
-var extend = function(a, b){
-            var result = {};
-            for(var name in a){
-                result[name] = a[name];
-            }
-            for(var name in b){
-                result[name] = b[name];
-            }
-            return result;
-        };
-
-function triangleMesh(n) {
-        var h = 1/n,  p = 0;
-        var pt = new Float32Array(12*n*n);
-        for(var i = 0; i < n; i++ ) {
-            for(var j = 0; j < n; j++ ){
-                pt[p++] = h*j;  pt[p++] = h*i;
-                pt[p++] = h*(j+1);  pt[p++] = h*i;
-                pt[p++] = h*j;  pt[p++] = h*(i+1);
-                pt[p++] = h*(j+1);  pt[p++] = h*i;
-                pt[p++] = h*j;  pt[p++] = h*(i+1);
-                pt[p++] = h*(j+1);  pt[p++] = h*(i+1);
-            }
-        }
-        return pt;
-    }        
-
-
-var Solver = function() {
+var Solver = function (canvas) {
     var gl;
     var progs;
 
@@ -38,357 +10,299 @@ var Solver = function() {
 
     var lightVec = (new Vec3(-1,-1,1)).normalize();
     var vtxPosBuffer;
+    
 
-    
-    
-    var shaderSources = {
-        'flat-vs': 'flat-vs',
-        'flat-fs': 'flat-fs',
-        'init-fs': 'init-fs',
-        'crystal-fs': 'crystal-fs',
-        'stefan-fs': 'stefan-fs',
-        'twophase-fs': 'twophase-fs',
+    gl = WebGLDebugUtils.makeDebugContext(canvas.getContext("experimental-webgl"));
+            
+    var ext;
+    try {
+        ext = gl.getExtension("OES_texture_float");
+    } catch(e) {}
+    if ( !ext ) {
+        throw "No OES_texture_float extension";
+    }
+    if (gl.getParameter(gl.MAX_VERTEX_TEXTURE_IMAGE_UNITS) == 0){
+        throw "No vertex texture";
     }
 
+    var self = this;
+    // attach components
+    Solver.components.forEach(function (component) {
+        component(self, gl);
+    });
+    
+    gl.viewport(0, 0, canvas.width, canvas.height);
+ 
     var PROGS_DESC = {
-        'init': {
-            'vs': 'flat-vs',
-            'fs': 'init-fs',
-            'attribs': ['aVertexPosition'],
-            'uniforms': ['uTexSize','uTexStep']
-        },
-        'crystal': {
-            'vs': 'flat-vs',
-            'fs': 'crystal-fs',
-            'attribs': ['aVertexPosition'],
-            'uniforms': ['uSampler', 'uTexSize','uTexStep']
-        },
-        'stefan': {
-            'vs': 'flat-vs',
-            'fs': 'stefan-fs',
-            'attribs': ['aVertexPosition'],
-            'uniforms': ['uSampler', 'uTexSize','uTexStep']
-        },
-        'plain': {
-            'vs': 'flat-vs',
-            'fs': 'flat-fs',
-            'attribs': ['aVertexPosition'],
-            'uniforms': ['uSampler','uTexSize','uTexStep','light']
-        },
-        'twophase': {
-            'vs': 'flat-vs',
-            'fs': 'twophase-fs',
-            'attribs': ['aVertexPosition'],
-            'uniforms': ['uSampler','uTexSize','uTexStep','light']
-        }
+        'init':     {vs: 'flat-vs',fs: 'init'},
+        'crystal':  {vs: 'flat-vs',fs: 'crystal'},
+        'stefan':   {vs: 'flat-vs',fs: 'stefan'},
+        'onephase': {vs: 'flat-vs',fs: 'onephase'},
+        'twophase': {vs: 'flat-vs',fs: 'twophase'},
     };
 
-    return {
+    progs = {};
+    $.each(PROGS_DESC, function (name, desc){
+        progs[name] = new self.Program(name, Solver.shaderSources[desc.vs], Solver.shaderSources[desc.fs]);
+    });
+ 
+    this.params = {};
     
-        params: {},
+    this.simulationRunning = false;
 
-        initGL: function(canvas) {
-            gl = WebGLDebugUtils.makeDebugContext(canvas.getContext("experimental-webgl"));
-            
-            var ext;
-            try {
-                ext = gl.getExtension("OES_texture_float");
-            } catch(e) {}
-            if ( !ext ) {
-                alert(err + "OES_texture_float extension"); return;
-            }
-            if (gl.getParameter(gl.MAX_VERTEX_TEXTURE_IMAGE_UNITS) == 0){
-                alert(err + "Vertex texture"); return;
-            }
+    function createFloatTexture(size) {
+        var tex = gl.createTexture();
+        gl.bindTexture(gl.TEXTURE_2D, tex);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT );
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT );
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, size, size, 0, gl.RGBA, gl.FLOAT, null);
+        gl.bindTexture(gl.TEXTURE_2D, null);
+        
+        return tex;
+    };
 
-            gl.viewport(0, 0, canvas.width, canvas.height);
-            
-        },
+    // initialize textures of size n
+    this.initTextureFramebuffer = function(n) {
+        // create storage textures
+        texTgt = createFloatTexture(n);
+        texSrc = createFloatTexture(n);
 
-        getShader: function(name, type) {
-            var shader;
-            shader = gl.createShader(type);
+        // create framebuffer
+        framebuffer = gl.createFramebuffer();
+        gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
+        framebuffer.width = n;
+        framebuffer.height = n;
 
-             var directives = [
-                        '#version 100',
-                        'precision highp int;',
-                        'precision highp float;',
-                        'precision highp vec2;',
-                        'precision highp vec3;',
-                        'precision highp vec4;',
-                    ].join('\n');
-            
-            gl.shaderSource(shader, directives + '\n' + shaderSources[name]);
-            gl.compileShader(shader);
-            if(!gl.getShaderParameter(shader, gl.COMPILE_STATUS)){
-                throw name + ' shader compile failed: ' + gl.getShaderInfoLog(shader);
-            }
+        // create renderbuffer for depth
+        var renderbuffer = gl.createRenderbuffer();
+        gl.bindRenderbuffer(gl.RENDERBUFFER, renderbuffer);
+        gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT16, framebuffer.width, framebuffer.height);
 
-            return shader;
-        },
+        // attach renderbuffer
+        gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, renderbuffer);
+      
+        // release buffers
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+        gl.bindRenderbuffer(gl.RENDERBUFFER, null);
+    };
 
-        loadProgs: function(desc) {
-            var progs = {};
-            for (var id in desc) {
-                var program = gl.createProgram();
-                progs[id] = program;
-                gl.attachShader(program, this.getShader(desc[id].vs, gl.VERTEX_SHADER));
-                gl.attachShader(program, this.getShader(desc[id].fs, gl.FRAGMENT_SHADER));
-                gl.linkProgram(program);
-                if(!gl.getProgramParameter(program, gl.LINK_STATUS)){
-                    throw id + ' program link failed: '+ gl.getProgramInfoLog(program);
-                }
-                
-                // enable atributes and cache their location
-                for (var i = 0; i < desc[id].attribs.length; i++) {
-                    progs[id][desc[id].attribs[i]] = gl.getAttribLocation(progs[id], desc[id].attribs[i]);
-                    gl.enableVertexAttribArray(progs[id][desc[id].attribs[i]]);
-                }
-                
-                // cache uniform locations
-                for (var i = 0; i < desc[id].uniforms.length; i++) {
-                    progs[id][desc[id].uniforms[i]] = gl.getUniformLocation(progs[id], desc[id].uniforms[i]);
-                }
-            }
-            return progs;
-        },
+    this.initVtxBuffers = function() {
+        
+        vtxPosBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, vtxPosBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, triangleMesh(1), gl.STATIC_DRAW);
+        vtxPosBuffer.itemSize = 2;
+        vtxPosBuffer.numItems = 12;
 
-        initShaders: function() {
-            progs = this.loadProgs(PROGS_DESC);
-        },
+    };
 
-        createFloatTexture: function(size) {
-            var tex = gl.createTexture();
-            gl.bindTexture(gl.TEXTURE_2D, tex);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT );
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT );
-            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, size, size, 0, gl.RGBA, gl.FLOAT, null);
-            gl.bindTexture(gl.TEXTURE_2D, null);
-            
-            return tex;
-        },
+    // set the initial condition
+    this.initState = function() {
+        var prog = progs.init;
+        prog.use({
+            uTexSize: framebuffer.width,
+            uTexStep: 1/framebuffer.width,
+        });
 
-        // initialize textures of size n
-        initTextureFramebuffer: function(n) {
-            // create storage textures
-            texTgt = this.createFloatTexture(n);
-            texSrc = this.createFloatTexture(n);
+        gl.bindBuffer(gl.ARRAY_BUFFER, vtxPosBuffer);
+        gl.vertexAttribPointer(prog.attribLocation('aVertexPosition'), vtxPosBuffer.itemSize, gl.FLOAT, false, 0, 0);
+        
+        gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
+        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texSrc, 0);
+        
+        gl.clear(gl.COLOR_BUFFER_BIT);
+        
+        gl.drawArrays(gl.TRIANGLES, 0, 6);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    };
 
-            // create framebuffer
-            framebuffer = gl.createFramebuffer();
-            gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
-            framebuffer.width = n;
-            framebuffer.height = n;
+    // run nSteps of the computation
+    this.updateState = function(nSteps) {
+        
+        var prog = progs[this.params.computation];
+        
+        prog.use({
+            uTexSize: framebuffer.width,
+            uTexStep: 1/framebuffer.width,
+        });
 
-            // create renderbuffer for depth
-            var renderbuffer = gl.createRenderbuffer();
-            gl.bindRenderbuffer(gl.RENDERBUFFER, renderbuffer);
-            gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT16, framebuffer.width, framebuffer.height);
+        gl.bindBuffer(gl.ARRAY_BUFFER, vtxPosBuffer);
+        gl.vertexAttribPointer(prog.attribLocation('aVertexPosition'), vtxPosBuffer.itemSize, gl.FLOAT, false, 0, 0);
+        
+        gl.activeTexture(gl.TEXTURE0);
+        gl.uniform1i(prog.uSampler, 0); // texture on unit 0
 
-            // attach renderbuffer
-            gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, renderbuffer);
-          
-            // release buffers
-            gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-            gl.bindRenderbuffer(gl.RENDERBUFFER, null);
-        },
-
-     
-
-
-        initVtxBuffers: function() {
-            
-            vtxPosBuffer = gl.createBuffer();
-            gl.bindBuffer(gl.ARRAY_BUFFER, vtxPosBuffer);
-            gl.bufferData(gl.ARRAY_BUFFER, triangleMesh(1), gl.STATIC_DRAW);
-            vtxPosBuffer.itemSize = 2;
-            vtxPosBuffer.numItems = 12;
-
-        },
-
-        // set the initial condition
-        initState: function() {
-            gl.useProgram(progs.init);
-            gl.uniform1f(progs.init.uTexSize, framebuffer.width);
-            gl.uniform1f(progs.init.uTexStep, 1/framebuffer.width);
-
-            gl.bindBuffer(gl.ARRAY_BUFFER, vtxPosBuffer);
-            gl.vertexAttribPointer(progs.init.aVertexPosition, vtxPosBuffer.itemSize, gl.FLOAT, false, 0, 0);
-            
-            gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
-            gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texSrc, 0);
-            
-            gl.clear(gl.COLOR_BUFFER_BIT);
-            
-            gl.drawArrays(gl.TRIANGLES, 0, 6);
-            gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-        },
-
-        // run nSteps of the computation
-        updateState: function(nSteps) {
-            
-            var prog = progs[this.params.computation];
-            
-            gl.useProgram(prog);
-            gl.uniform1f(prog.uTexSize, framebuffer.width);
-            gl.uniform1f(prog.uTexStep, 1/framebuffer.width);
-
-            gl.bindBuffer(gl.ARRAY_BUFFER, vtxPosBuffer);
-            gl.vertexAttribPointer(prog.aVertexPosition, vtxPosBuffer.itemSize, gl.FLOAT, false, 0, 0);
-            
-            gl.activeTexture(gl.TEXTURE0);
-            gl.uniform1i(prog.uSampler, 0); // texture on unit 0
-
-            // output into the framebuffer
-            gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
-            
-            for (var i = 0; i < nSteps; i ++ ) {
-                // set up source texture
-                gl.bindTexture(gl.TEXTURE_2D, texSrc);
-                
-                // set up output texture
-                gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texTgt, 0);
-                //gl.clear(gl.COLOR_BUFFER_BIT);
-                gl.drawArrays(gl.TRIANGLES, 0, 6);
-             
-                // swap textures
-                var t = texSrc;
-                texSrc = texTgt;
-                texTgt = t;
-            }
-            
-            // unbind framebuffer
-            gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-        },
-
-
-        // output to canvas
-        drawScene: function() {
-            var program = progs[this.params.display];
-            gl.useProgram(program);
-            
-            gl.uniform1f(program.uTexSize, framebuffer.width);
-            gl.uniform1f(program.uTexStep, 1/framebuffer.width);
-            
-            lightVec.storeUniform(gl, program.light);
-            
-            gl.bindBuffer(gl.ARRAY_BUFFER, vtxPosBuffer);
-            gl.vertexAttribPointer(program.aVertexPosition, vtxPosBuffer.itemSize, gl.FLOAT, false, 0, 0);
-            
-            
-            gl.activeTexture(gl.TEXTURE0);
+        // output into the framebuffer
+        gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
+        
+        for (var i = 0; i < nSteps; i ++ ) {
+            // set up source texture
             gl.bindTexture(gl.TEXTURE_2D, texSrc);
-            gl.uniform1i(program.uSampler, 0);
             
-            gl.clear(gl.COLOR_BUFFER_BIT);
+            // set up output texture
+            gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texTgt, 0);
+
             gl.drawArrays(gl.TRIANGLES, 0, 6);
-        },
-
+         
+            // swap textures
+            var t = texSrc;
+            texSrc = texTgt;
+            texTgt = t;
+        }
         
+        // unbind framebuffer
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    };
 
-        // asynchronous loading of external files
-        loadShaders: function(data, ready) {
-            var count = 0;
-            $.each(data, function(name, path) {
-                count += 1;
 
-                $.ajax({
-                    mimeType: 'text/plain; charset=x-user-defined',
-                    url:         path + '.c',
-                    type:        'GET',
-                    dataType:    'text',
-                    cache:       false,
-                    success:     function(source) {
-                                    data[name] = source;
-                                    count -= 1;
-                                    if (count == 0) {
-                                        ready();
-                                    }
-                                }
-                });
-            });
-        },
-
+    // output to canvas
+    this.drawScene = function() {
+        var prog = progs[this.params.display];
+        prog.use({
+            uTexSize: framebuffer.width,
+            uTexStep: 1/framebuffer.width,
+            light: lightVec,
+        });
         
-
-        webGLStart: function(params) {
-            var self = this;
-            var canvas = document.getElementById("main-canvas");
-
-            this.params = extend(
-                {
-                    size: 256,
-                    computation: 'crystal',
-                    display: 'plain',
-                }, params
-            );
-            
-            // grid size
-            var n = this.params.size;
-            canvas.height = n;
-            canvas.width = n;
-            
-            this.loadShaders(shaderSources, function() {
-            
-                self.initGL(canvas);
-                try {
-                    self.initShaders();
-                }
-                catch (e) {
-                    alert('Shaders: ' + e);
-                    throw e;
-                }
-                self.initVtxBuffers();
-                self.initTextureFramebuffer(n/2);
-
-                self.initState();
-                
-                self.start();
-             });
-        },
+        gl.bindBuffer(gl.ARRAY_BUFFER, vtxPosBuffer);
+        gl.vertexAttribPointer(prog.attribLocation('aVertexPosition'), vtxPosBuffer.itemSize, gl.FLOAT, false, 0, 0);
         
-        start: function() {
-            var lasttime = Date.now();
-            var nframes = 0;
-            var nstepsframe = 20;
-            var nsteps = 0;
-            
-            var self = this;
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, texSrc);
+        prog.setTexture('uSampler', 0);
+        
+        gl.clear(gl.COLOR_BUFFER_BIT);
+        gl.drawArrays(gl.TRIANGLES, 0, 6);
+    };
+
+    this.init = function(params) {
+        var self = this;
+
+        this.params = extend(
+            {
+                size: 256,
+                computation: 'crystal',
+                display: 'onephase',
+            }, params
+        );
+        
+        // grid size
+        var n = this.params.size;
+        canvas.height = n;
+        canvas.width = n;
+        
+        self.initVtxBuffers();
+        self.initTextureFramebuffer(n/2);
+        self.initState();
+
+        this.startAnimation();
+    };
     
-            setInterval(function() {
+    this.startAnimation = function() {
+        var lasttime = Date.now();
+        var nFrame = 0; // current animation frame
+        var nStep = 0; // current simulation step
+        var nStepsPerFrame = 20;
+        var delay = 20; // ms, delay between frames
+        var minfps = 20; // lowest framerate
+        var maxfps = 30; // highest framerate
+        var fps = null; // current framerate
+        var waitFrames = 5; // wait to get a better accuracy
+        var nextUpdateFrame = nFrame + waitFrames;
+        
+        var self = this;
+        if (!this.interval) {
+            this.interval = setInterval(function() {
                 
-                self.updateState(nstepsframe);
-                nsteps += nstepsframe;
+                if (self.simulationRunning) {
+                    self.updateState(nStepsPerFrame);
+                    nStep += nStepsPerFrame;
+                }
 
                 self.drawScene();
-                nframes ++;
+                nFrame ++;
                 
-                var waitFrames = 5;
-                if (nframes >= waitFrames) {
+                
+                if (nFrame >= nextUpdateFrame) {
+                    nextUpdateFrame = nFrame + waitFrames;
+                    
                     var time = Date.now();
-                    var fps = 1000.0*waitFrames/(time - lasttime);
-                    document.getElementById("framerate").innerHTML =
-                        "step: " + nsteps +
-                        ", FPS: " + fps.toFixed(1) +
-                        ", steps/s: " + (1000.0*waitFrames*nstepsframe/(time - lasttime)).toFixed(1);
-                    nframes = 0;
+                    fps = 1000.0 * waitFrames/(time - lasttime);
                     lasttime = time;
                     
-                    var maxfps = 30;
-                    if (fps < 20) {
-                        nstepsframe -= 2;
-                        if (nstepsframe < 5) nstepsframe = 5;
-                    } else if (fps > maxfps) {
-                        nstepsframe = Math.round(nstepsframe * fps / maxfps);
+                    if (self.simulationRunning) {
+                        if (fps < minfps) {
+                            nStepsPerFrame = Math.round(nStepsPerFrame * fps / minfps);
+                            if (nStepsPerFrame < 5) nStepsPerFrame = 5;
+                        } else if (fps > maxfps) {
+                            nStepsPerFrame = Math.round(nStepsPerFrame * fps / maxfps);
+                        }
                     }
+                
+                    document.getElementById("framerate").innerHTML =
+                        "step: " + nStep +
+                        ", FPS: " + fps.toFixed(1) +
+                        ", steps/s: " + Math.round(fps * nStepsPerFrame);
                 }    
-            }, 20);
-        },
-        
-        setLight: function(x,y,z) {
-            lightVec.set(x,y,z).normalize();
+            }, delay);
         }
+    };
+    
+    this.stopAnimation = function() {
+        if (this.interval) {
+            clearInterval(this.interval);
+            this.interval = null;
+        }
+    };
+    
+    this.toggleSimulation = function (on) {
+        this.simulationRunning = on;
     }
-}();
+    
+    this.setLight = function(x,y,z) {
+        lightVec.set(x,y,z).normalize();
+    };
+
+};
+
+// components from other files that depend on gl context
+Solver.components = [];
+
+// shader sources
+Solver.shaderSources = {
+    // vertex shaders
+    'flat-vs': {file: 'flat-vs'},
+    // initial data shaders
+    'init': {file: 'init-fs'},
+    // computation shaders
+    'crystal': {file: 'crystal-fs'},
+    'stefan': {file: 'stefan-fs'},
+    // draw shaders
+    'onephase': {file: 'flat-fs'},
+    'twophase': {file: 'twophase-fs'},
+};
+
+// asynchronously load shader sources, call ready() when done
+Solver.loadShaders = function(data, ready) {
+    var count = 0;
+    $.each(data, function(name, desc) {
+        count += 1;
+
+        $.ajax({
+            mimeType: 'text/plain; charset=x-user-defined',
+            url:         desc.file + '.c',
+            type:        'GET',
+            dataType:    'text',
+            cache:       false,
+            success:     function(source) {
+                            desc.source = source;
+                            count -= 1;
+                            if (count == 0) {
+                                ready();
+                            }
+                        }
+        });
+    });
+}

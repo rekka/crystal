@@ -6,8 +6,12 @@
 
 <script src="webgl-debug.js"></script>
 <script src="jquery.js"></script>
+
+<script src="util.js"></script>
 <script src="vector.js"></script>
+
 <script src="solver.js"></script>
+<script src="program.js"></script>
 
 <script>
 $(function() {
@@ -34,16 +38,32 @@ $(function() {
         });
     });
     
-    Solver.webGLStart({
-        size: 512,
-        computation: 'stefan',
-        display: 'twophase',
+    $('#start-stop').click(function() {
+        if (Solver.interval) {
+            Solver.stop();
+        } else {
+            Solver.start();
+        }
+    });
+    
+    Solver.loadShaders(Solver.shaderSources, function () {
+        var solver = new Solver(document.getElementById('main-canvas'));
+        solver.init({
+            size: 512,
+            computation: 'stefan',
+            display: 'twophase',
+        });
+        
+        solver.toggleSimulation(true);
     });
 });
 </script>
 </head>
 <body>
+<div>
 <button id="save-button">Save image</button>
+<button id="start-stop">Stop</button>
+</div>
 <canvas id="main-canvas" style="border: none;" width="512" height="512"></canvas>
 <p id="framerate"></p>
 </body>
