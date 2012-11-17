@@ -145,6 +145,8 @@ var Solver = function (canvas) {
             uTexSize: framebuffer.width,
             uTexStep: 1/framebuffer.width,
         });
+        
+        prog.set(this.params.computation.uniforms);
 
         gl.bindBuffer(gl.ARRAY_BUFFER, vtxPosBuffer);
         gl.vertexAttribPointer(prog.attribLocation('aVertexPosition'), vtxPosBuffer.itemSize, gl.FLOAT, false, 0, 0);
@@ -206,6 +208,7 @@ var Solver = function (canvas) {
             {
                 size: 256,
                 program: 'crystal',
+                uniforms: {},
             }, computation
         );
         

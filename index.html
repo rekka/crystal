@@ -6,7 +6,6 @@
 
 <script src="webgl-debug.js"></script>
 <script src="jquery.js"></script>
-
 <script src="knockout.js"></script>
 
 <script src="util.js"></script>
@@ -20,16 +19,40 @@
 </head>
 <body>
 <nav>
-<div>
+<section>
+<h3>Computation</h3>
+Program: 
 <select data-bind='value: computation.program, options: computation.programs'></select>
+Mesh size:
 <select data-bind='value: computation.size, options: computation.sizes'></select>
-<button data-bind='click: restartComputation'>Restart</button>
-</div>
-<div>
+
+<table data-bind='if: computation.uniformsArray().length > 0'>
+  <thead>
+    <tr>
+      <th>Uniform</th>
+      <th>Value</th>
+    </tr>
+  </thead>
+  <tbody data-bind='foreach: computation.uniformsArray'>
+    <tr>
+      <td data-bind='text: name'></td>
+      <td><input data-bind='value: value' / ></td>
+    </tr>
+  </tbody>
+</table>
+<span data-bind='visible: computation.hasError, text: computation.hasError'></span>
+<button data-bind='click: restartComputation, disable: computation.hasError'>Restart</button>
+
+<input data-bind='value: computations["crystal"].epsilon'></input>
+<span data-bind='visible: computations["crystal"].epsilon.hasError, text: computations["crystal"].epsilon.hasError'></span>
+<span data-bind='text: typeof(computations["crystal"].epsilon())'></span>
+</section>
+<section>
+<h3>Display</h3>
 <select data-bind='value: display.program, options: display.programs'></select>
 <button id="save-button">Save image</button>
 <button id="start-stop" data-bind='text: (status.computation.running() ? "Stop" : "Start"), click: toggleComputation'></button>
-</div>
+</section>
 </nav>
 <canvas id="main-canvas" style="border: none;" width="512" height="512"></canvas>
 <p>

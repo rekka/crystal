@@ -4,6 +4,9 @@ uniform highp sampler2D uSampler;
 uniform float uTexSize;
 uniform float uTexStep;
 
+// other parameters
+uniform float epsilon;
+
 // sample value from texture
 vec4 grid(float dx, float dy) {
     return texture2D(uSampler, vec2(vTextureCoord.s + dx, vTextureCoord.t + dy));
@@ -37,7 +40,7 @@ void main(void)
     float h = 1.0;
     float oh = 1.0/h;
     float oh2 = oh * oh;
-    float epsilon = 0.0001;
+    
     float dt = 0.25 * epsilon * h;
     
     // symmetric gradient
