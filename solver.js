@@ -58,6 +58,25 @@ var Solver = function (canvas) {
         display: function () { return PARAMS_DISPLAY; }, // can change during computation
     };
     
+    this.recompileShaders = function () {   
+        var initSource = Solver.shaderSources[PROGS_DESC.init.fs];
+        var initFunc = this.params.computation.initFunc;
+
+        if (initFunc) {
+            var source = initSource.source;
+            var split = source.split('/*CUSTOM*/');
+            split[1] = 'return ' + initFunc + ';';
+            source = split.join('');
+
+            initSource = {
+                file: 'custom-init',
+                source: source,
+            };
+        } 
+        
+        progs.init = new self.Program('init', Solver.shaderSources[PROGS_DESC.init.vs], initSource);
+    }
+    
     this.status = {// observable status of the solver
         computation: {
             running: ko.observable(false),
@@ -228,6 +247,7 @@ var Solver = function (canvas) {
                 size: 256,
                 program: 'crystal',
                 uniforms: {},
+                initFunc: 'x*x + y*y',
             }, computation
         );
         
@@ -242,6 +262,8 @@ var Solver = function (canvas) {
         var n = this.params.computation.size;
         // canvas.height = n;
         // canvas.width = n;
+        
+        self.recompileShaders();
         
         self.initVtxBuffers();
         self.initTextureFramebuffer(n/2);

@@ -32,3 +32,7 @@ table.params tr > td:nth-child(2) > * {
 table.params tr > td:nth-child(2) > input {
     width: calc(100% - 6px);
 }
+
+.hasError {
+    background: salmon;
+}

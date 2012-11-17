@@ -17,8 +17,9 @@ float func(float x, float y) {
 
     float b1 = max(distance(vec2(x,y), vec2(-0.,0.)) - 0.5, 0.);
     float b2 = max(distance(vec2(x,y), vec2(0.59,0.)) - 0.1, 0.);
-    
+    /*CUSTOM*/
     return min(b1*10.,10.*b2-0.01);
+    /*CUSTOM*/
 }
 
 void main(void)

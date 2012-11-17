@@ -67,8 +67,8 @@ $(function() {
     
     
     Solver.loadShaders(Solver.shaderSources, function () {
-        
-        var solver = new Solver(document.getElementById('main-canvas'));
+        var canvas = document.getElementById('main-canvas');
+        var solver = new Solver(canvas);
         
         var viewModel = {
             computations: {
@@ -92,6 +92,7 @@ $(function() {
         viewModel.computation = {
                 size: ko.observable(512),
                 program: ko.observable('stefan'),
+                initFunc: ko.observable('wrong'),
                 
                 sizes: [128, 256, 512, 1024, 2048],
                 programs: Object.keys(viewModel.computations),
@@ -123,16 +124,26 @@ $(function() {
                 
                 var program = viewModel.computation.program();
                 var uniforms = ko.toJS(viewModel.computations[program]);
-        
-                console.log(uniforms);
-        
-                solver.init({
-                        size: viewModel.computation.size(),
-                        program: program,
-                        uniforms: uniforms,
-                    }, 
-                    viewModel.display.params
-                );
+                var size = viewModel.computation.size();
+                
+                var canvassize = Math.max(512, size);
+                
+                canvas.width = canvassize;
+                canvas.height = canvassize;
+                
+                try {
+                    solver.init({
+                            size: size,
+                            program: program,
+                            uniforms: uniforms,
+                            initFunc: viewModel.computation.initFunc(),
+                        }, 
+                        viewModel.display.params
+                    );
+                }
+                catch (e) {
+                    alert(e);
+                }
             };
         
         viewModel.display = {

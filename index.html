@@ -33,6 +33,8 @@
 </td></tr>
 </table>
 
+<textarea data-bind='value: computation.initFunc'></textarea>
+
 <table class='params' data-bind='if: computation.uniformsArray().length > 0'>
   <thead>
     <tr>
@@ -43,7 +45,7 @@
   <tbody data-bind='foreach: computation.uniformsArray'>
     <tr>
       <td data-bind='text: name'></td>
-      <td><input data-bind='value: value' / ></td>
+      <td><input data-bind='value: value, css: { hasError: value.hasError } ' / ></td>
     </tr>
   </tbody>
 </table>
@@ -68,7 +70,7 @@
 </nav>
 
 <div>
-<canvas id="main-canvas" width="1024" height="512"></canvas>
+<canvas id="main-canvas" width="512" height="512"></canvas>
 </div>
 </body>
 </html>
