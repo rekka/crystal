@@ -61,9 +61,12 @@ var Solver = function (canvas) {
     this.status = {// observable status of the solver
         computation: {
             running: ko.observable(false),
+            nStep: ko.observable(0),
+            nStepsPerSec: ko.observable(0),
         },
         display: {
-            
+            nFrame: ko.observable(0),
+            fps: ko.observable(0),
         },
     };
 
@@ -270,10 +273,15 @@ var Solver = function (canvas) {
                         }
                     }
                 
-                    document.getElementById("framerate").innerHTML =
-                        "step: " + nStep +
-                        ", FPS: " + fps.toFixed(1) +
-                        ", steps/s: " + Math.round(fps * nStepsPerFrame);
+                    // document.getElementById("framerate").innerHTML =
+                        // "step: " + nStep +
+                        // ", FPS: " + fps.toFixed(1) +
+                        // ", steps/s: " + Math.round(fps * nStepsPerFrame);
+                        
+                    self.status.computation.nStep(nStep);
+                    self.status.computation.nStepsPerSec(fps * nStepsPerFrame),
+                    self.status.display.nFrame(nFrame);
+                    self.status.display.fps(fps);
                 }    
             }, delay);
         }

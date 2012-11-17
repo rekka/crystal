@@ -32,6 +32,10 @@
 </div>
 </nav>
 <canvas id="main-canvas" style="border: none;" width="512" height="512"></canvas>
-<p id="framerate"></p>
+<p>
+Step: <span data-bind='text: status.computation.nStep'></span>
+FPS: <span data-bind='text: status.display.fps().toFixed(0)'></span>
+Steps/s: <span data-bind='text: status.computation.nStepsPerSec().toFixed(0)'></span>
+</p>
 </body>
 </html>
