@@ -32,9 +32,9 @@ var Solver = function (canvas) {
     
     
     var PROGS_DESC = {
-        'init':     {vs: 'flat-vs', fs: 'init'},
-        'crystal':  {vs: 'flat-vs', fs: 'crystal'},
-        'stefan':   {vs: 'flat-vs', fs: 'stefan'},
+        'init':     {vs: 'compute-vs', fs: 'init'},
+        'crystal':  {vs: 'compute-vs', fs: 'crystal'},
+        'stefan':   {vs: 'compute-vs', fs: 'stefan'},
         'onephase': {vs: 'flat-vs', fs: 'onephase'},
         'twophase': {vs: 'flat-vs', fs: 'twophase'},
     };
@@ -335,6 +335,7 @@ Solver.components = [];
 Solver.shaderSources = {
     // vertex shaders
     'flat-vs': {file: 'flat-vs'},
+    'compute-vs': {file: 'compute-vs'},
     // initial data shaders
     'init': {file: 'init-fs'},
     // computation shaders

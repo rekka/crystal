@@ -3,14 +3,12 @@ varying vec2 vTextureCoord;
 uniform highp sampler2D uSampler;
 uniform float uTexSize;
 uniform float uTexStep;
-uniform vec2 scale;
 
 uniform vec3 light;
 
 // sample value from texture
 vec4 grid(float dx, float dy) {
-    vec2 real = vTextureCoord * scale;
-    return texture2D(uSampler, vec2(real.x + dx, real.y + dy));
+    return texture2D(uSampler, vec2(vTextureCoord.x + dx, vTextureCoord.y + dy));
 }
 
 void main(void)
@@ -27,8 +25,7 @@ void main(void)
         //   x: o   e
         //
 		vec4 u00 = grid(0.0, 0.0);
-        vec2 real = vTextureCoord * scale;
-        vec2 par = mod(real,uTexStep);
+        vec2 par = mod(vTextureCoord,uTexStep);
         vec2 p;
         if (par.x <= .5*uTexStep) {//odd pixel
             vec4 ux = grid(-uTexStep, 0.);
