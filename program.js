@@ -81,7 +81,6 @@ Solver.components.push(function (solver, gl) {
                             case 'Vec4' : gl.uniform4f(location, value.x, value.y, value.z, value.w); break;
                             case 'Vec3' : gl.uniform3f(location, value.x, value.y, value.z); break;
                             case 'Vec2' : gl.uniform2f(location, value.x, value.y); break;
-                            case 'Texture' : this.sampler(name, location, value); break;
                             case 'object':
                                 if(value instanceof Array){
                                     gl['uniform' + value.length + 'fv'](location, value);

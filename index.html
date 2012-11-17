@@ -7,63 +7,29 @@
 <script src="webgl-debug.js"></script>
 <script src="jquery.js"></script>
 
+<script src="knockout.js"></script>
+
 <script src="util.js"></script>
 <script src="vector.js"></script>
 
 <script src="solver.js"></script>
 <script src="program.js"></script>
+<script src="main.js"></script>
 
-<script>
-$(function() {
-    
-    $('#main-canvas').mousemove(function(e) {
-            var el = $(this);
-            var parentOffset = el.offset();
-            var relX = 2 * (e.pageX - parentOffset.left) / el.width() - 1;
-            var relY = 2 * (e.pageY - parentOffset.top) / el.height() - 1;
-            
-            Solver.setLight(relX, -relY, 1);
-        }
-    );
 
-    $('#save-button').click(function() {
-        var canvas = document.getElementById('main-canvas');
-        var image = canvas.toDataURL('image/png');
-        
-        $.ajax({
-            type: 'POST',
-            url: 'http://localhost:8080/test.png',
-            data: image,
-            dataType: 'text'
-        });
-    });
-    
-    $('#start-stop').click(function() {
-        if (Solver.interval) {
-            Solver.stop();
-        } else {
-            Solver.start();
-        }
-    });
-    
-    Solver.loadShaders(Solver.shaderSources, function () {
-        var solver = new Solver(document.getElementById('main-canvas'));
-        solver.init({
-            size: 512,
-            computation: 'stefan',
-            display: 'twophase',
-        });
-        
-        solver.toggleSimulation(true);
-    });
-});
-</script>
 </head>
 <body>
+<nav>
 <div>
-<button id="save-button">Save image</button>
-<button id="start-stop">Stop</button>
+<select data-bind='options: computation.programs'></select>
+<button data-bind=''>Restart</button>
 </div>
+<div>
+<select data-bind='value: display.program, options: display.programs'></select>
+<button id="save-button">Save image</button>
+<button id="start-stop" data-bind='text: (status.computation.running() ? "Stop" : "Start"), click: toggleComputation'></button>
+</div>
+</nav>
 <canvas id="main-canvas" style="border: none;" width="512" height="512"></canvas>
 <p id="framerate"></p>
 </body>

@@ -8,7 +8,6 @@ var Solver = function (canvas) {
     var texTgt;
     var texSrc;
 
-    var lightVec = (new Vec3(-1,-1,1)).normalize();
     var vtxPosBuffer;
     
 
@@ -34,11 +33,11 @@ var Solver = function (canvas) {
     gl.viewport(0, 0, canvas.width, canvas.height);
  
     var PROGS_DESC = {
-        'init':     {vs: 'flat-vs',fs: 'init'},
-        'crystal':  {vs: 'flat-vs',fs: 'crystal'},
-        'stefan':   {vs: 'flat-vs',fs: 'stefan'},
-        'onephase': {vs: 'flat-vs',fs: 'onephase'},
-        'twophase': {vs: 'flat-vs',fs: 'twophase'},
+        'init':     {vs: 'flat-vs', fs: 'init'},
+        'crystal':  {vs: 'flat-vs', fs: 'crystal'},
+        'stefan':   {vs: 'flat-vs', fs: 'stefan'},
+        'onephase': {vs: 'flat-vs', fs: 'onephase'},
+        'twophase': {vs: 'flat-vs', fs: 'twophase'},
     };
 
     progs = {};
@@ -46,9 +45,28 @@ var Solver = function (canvas) {
         progs[name] = new self.Program(name, Solver.shaderSources[desc.vs], Solver.shaderSources[desc.fs]);
     });
  
-    this.params = {};
+    // default display
+    var PARAMS_DISPLAY = {
+        program: 'onephase',
+        uniforms: {
+            light: (new Vec3(-1,-1,1)).normalize(),
+        },
+    };
+ 
+    this.params = {
+        computation: {}, // can be set up only once
+        
+        display: function () { return PARAMS_DISPLAY; }, // can change during computation
+    };
     
-    this.simulationRunning = false;
+    this.status = {// observable status of the solver
+        computation: {
+            running: ko.observable(false),
+        },
+        display: {
+            
+        },
+    };
 
     function createFloatTexture(size) {
         var tex = gl.createTexture();
@@ -112,8 +130,6 @@ var Solver = function (canvas) {
         gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
         gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texSrc, 0);
         
-        gl.clear(gl.COLOR_BUFFER_BIT);
-        
         gl.drawArrays(gl.TRIANGLES, 0, 6);
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     };
@@ -121,7 +137,7 @@ var Solver = function (canvas) {
     // run nSteps of the computation
     this.updateState = function(nSteps) {
         
-        var prog = progs[this.params.computation];
+        var prog = progs[this.params.computation.program];
         
         prog.use({
             uTexSize: framebuffer.width,
@@ -159,12 +175,14 @@ var Solver = function (canvas) {
 
     // output to canvas
     this.drawScene = function() {
-        var prog = progs[this.params.display];
+        var display = this.params.display();
+        var prog = progs[display.program];
         prog.use({
             uTexSize: framebuffer.width,
             uTexStep: 1/framebuffer.width,
-            light: lightVec,
         });
+        
+        prog.set(display.uniforms);
         
         gl.bindBuffer(gl.ARRAY_BUFFER, vtxPosBuffer);
         gl.vertexAttribPointer(prog.attribLocation('aVertexPosition'), vtxPosBuffer.itemSize, gl.FLOAT, false, 0, 0);
@@ -173,23 +191,28 @@ var Solver = function (canvas) {
         gl.bindTexture(gl.TEXTURE_2D, texSrc);
         prog.setTexture('uSampler', 0);
         
-        gl.clear(gl.COLOR_BUFFER_BIT);
         gl.drawArrays(gl.TRIANGLES, 0, 6);
     };
 
-    this.init = function(params) {
+    this.init = function(computation, display) {
         var self = this;
 
-        this.params = extend(
+        this.params.computation = $.extend({},
             {
                 size: 256,
-                computation: 'crystal',
-                display: 'onephase',
-            }, params
+                program: 'crystal',
+            }, computation
         );
         
+        if (typeof(display) === 'function') {
+            this.params.display = display;
+        } else {
+            var temp = $.extend({}, PARAMS_DISPLAY, display);
+            this.params.display = function () { return temp; };
+        }
+        
         // grid size
-        var n = this.params.size;
+        var n = this.params.computation.size;
         canvas.height = n;
         canvas.width = n;
         
@@ -203,7 +226,7 @@ var Solver = function (canvas) {
     this.startAnimation = function() {
         var lasttime = Date.now();
         var nFrame = 0; // current animation frame
-        var nStep = 0; // current simulation step
+        var nStep = 0; // current computation step
         var nStepsPerFrame = 20;
         var delay = 20; // ms, delay between frames
         var minfps = 20; // lowest framerate
@@ -216,7 +239,8 @@ var Solver = function (canvas) {
         if (!this.interval) {
             this.interval = setInterval(function() {
                 
-                if (self.simulationRunning) {
+                var simulationRunning = self.status.computation.running();
+                if (simulationRunning) {
                     self.updateState(nStepsPerFrame);
                     nStep += nStepsPerFrame;
                 }
@@ -232,7 +256,7 @@ var Solver = function (canvas) {
                     fps = 1000.0 * waitFrames/(time - lasttime);
                     lasttime = time;
                     
-                    if (self.simulationRunning) {
+                    if (simulationRunning) {
                         if (fps < minfps) {
                             nStepsPerFrame = Math.round(nStepsPerFrame * fps / minfps);
                             if (nStepsPerFrame < 5) nStepsPerFrame = 5;
@@ -257,12 +281,16 @@ var Solver = function (canvas) {
         }
     };
     
-    this.toggleSimulation = function (on) {
-        this.simulationRunning = on;
+    this.toggleComputation = function (on) {
+        if (on === undefined) {
+            this.status.computation.running(!this.status.computation.running());
+        } else {
+            this.status.computation.running(on);
+        }
     }
     
     this.setLight = function(x,y,z) {
-        lightVec.set(x,y,z).normalize();
+        this.params.display.light.set(x,y,z).normalize();
     };
 
 };

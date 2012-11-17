@@ -1,16 +1,5 @@
 
 
-var extend = function(a, b){
-            var result = {};
-            for(var name in a){
-                result[name] = a[name];
-            }
-            for(var name in b){
-                result[name] = b[name];
-            }
-            return result;
-        };
-
 function triangleMesh(n) {
         var h = 1/n,  p = 0;
         var pt = new Float32Array(12*n*n);
