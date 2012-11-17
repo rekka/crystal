@@ -188,11 +188,19 @@ var Solver = function (canvas) {
 
     // output to canvas
     this.drawScene = function() {
+    
+        var w = canvas.width;
+        var h = canvas.height;
+        
+        var texSize = framebuffer.width;
+        var mesh = texSize * 2;
+        
         var display = this.params.display();
         var prog = progs[display.program];
         prog.use({
-            uTexSize: framebuffer.width,
-            uTexStep: 1/framebuffer.width,
+            uTexSize: texSize,
+            uTexStep: 1/texSize,
+            scale: [w/mesh, h/mesh],
         });
         
         prog.set(display.uniforms);
@@ -204,7 +212,7 @@ var Solver = function (canvas) {
         gl.bindTexture(gl.TEXTURE_2D, texSrc);
         prog.setTexture('uSampler', 0);
         
-        gl.viewport(0, 0, canvas.width, canvas.height);
+        gl.viewport(0, 0, w, h);
         
         gl.drawArrays(gl.TRIANGLES, 0, 6);
     };
@@ -232,14 +240,12 @@ var Solver = function (canvas) {
         
         // grid size
         var n = this.params.computation.size;
-        canvas.height = n;
-        canvas.width = n;
+        // canvas.height = n;
+        // canvas.width = n;
         
         self.initVtxBuffers();
         self.initTextureFramebuffer(n/2);
     
-        gl.viewport(0, 0, n, n);
-
         self.initState();
 
         this.startAnimation();
