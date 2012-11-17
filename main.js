@@ -149,7 +149,12 @@ $(function() {
                 };
                 return p;
             }, viewModel),
-            
+        
+        viewModel.statusTable = [
+            {name: 'nStep', value: solver.status.computation.nStep},
+            {name: 'FPS', value: ko.computed(function () { return solver.status.display.fps().toFixed(1);}) },
+            {name: 'steps/s', value: ko.computed(function () { return solver.status.computation.nStepsPerSec().toFixed(0);}) },
+            ]
         
         ko.applyBindings(viewModel);
 

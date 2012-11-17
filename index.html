@@ -19,6 +19,7 @@
 </head>
 <body>
 <nav>
+
 <section>
 <h3>Computation</h3>
 Program: 
@@ -40,13 +41,11 @@ Mesh size:
     </tr>
   </tbody>
 </table>
+
 <span data-bind='visible: computation.hasError, text: computation.hasError'></span>
 <button data-bind='click: restartComputation, disable: computation.hasError'>Restart</button>
-
-<input data-bind='value: computations["crystal"].epsilon'></input>
-<span data-bind='visible: computations["crystal"].epsilon.hasError, text: computations["crystal"].epsilon.hasError'></span>
-<span data-bind='text: typeof(computations["crystal"].epsilon())'></span>
 </section>
+
 <section>
 <h3>Display</h3>
 <select data-bind='value: display.program, options: display.programs'></select>
@@ -54,11 +53,10 @@ Mesh size:
 <button id="start-stop" data-bind='text: (status.computation.running() ? "Stop" : "Start"), click: toggleComputation'></button>
 </section>
 </nav>
+
 <canvas id="main-canvas" style="border: none;" width="512" height="512"></canvas>
-<p>
-Step: <span data-bind='text: status.computation.nStep'></span>
-FPS: <span data-bind='text: status.display.fps().toFixed(0)'></span>
-Steps/s: <span data-bind='text: status.computation.nStepsPerSec().toFixed(0)'></span>
-</p>
+<table data-bind='foreach: statusTable'>
+<tr><td data-bind='text: name'></td><td data-bind='text: value'></td></tr>
+</table>
 </body>
 </html>

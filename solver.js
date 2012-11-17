@@ -157,6 +157,7 @@ var Solver = function (canvas) {
         // output into the framebuffer
         gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
         
+        
         for (var i = 0; i < nSteps; i ++ ) {
             // set up source texture
             gl.bindTexture(gl.TEXTURE_2D, texSrc);
