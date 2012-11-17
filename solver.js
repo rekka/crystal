@@ -118,6 +118,13 @@ var Solver = function (canvas) {
 
     };
 
+    this.setFramebuffer = function (fbf) {
+        gl.bindFramebuffer(gl.FRAMEBUFFER, fbf);
+        if (fbf) {
+            gl.viewport(0, 0, fbf.width, fbf.height);
+        }
+    }
+    
     // set the initial condition
     this.initState = function() {
         var prog = progs.init;
@@ -129,11 +136,13 @@ var Solver = function (canvas) {
         gl.bindBuffer(gl.ARRAY_BUFFER, vtxPosBuffer);
         gl.vertexAttribPointer(prog.attribLocation('aVertexPosition'), vtxPosBuffer.itemSize, gl.FLOAT, false, 0, 0);
         
-        gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
+        this.setFramebuffer(framebuffer);
+        
         gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texSrc, 0);
         
         gl.drawArrays(gl.TRIANGLES, 0, 6);
-        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+        
+        this.setFramebuffer(null);
     };
 
     // run nSteps of the computation
@@ -155,8 +164,7 @@ var Solver = function (canvas) {
         gl.uniform1i(prog.uSampler, 0); // texture on unit 0
 
         // output into the framebuffer
-        gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
-        
+        this.setFramebuffer(framebuffer);
         
         for (var i = 0; i < nSteps; i ++ ) {
             // set up source texture
@@ -174,7 +182,7 @@ var Solver = function (canvas) {
         }
         
         // unbind framebuffer
-        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+        this.setFramebuffer(null);
     };
 
 
@@ -195,6 +203,8 @@ var Solver = function (canvas) {
         gl.activeTexture(gl.TEXTURE0);
         gl.bindTexture(gl.TEXTURE_2D, texSrc);
         prog.setTexture('uSampler', 0);
+        
+        gl.viewport(0, 0, canvas.width, canvas.height);
         
         gl.drawArrays(gl.TRIANGLES, 0, 6);
     };
