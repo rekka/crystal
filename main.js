@@ -73,7 +73,7 @@ $(function() {
         var viewModel = {
             computations: {
                 'crystal': {
-                        epsilon: ko.observable(2.0).extend({numeric: {min: 0.000001, max: 1.0}}),
+                        epsilon: ko.observable(0.0001).extend({numeric: {min: 0.000001, max: 1.0}}),
                     },
                 'stefan': {},
             },
