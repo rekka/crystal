@@ -21,8 +21,9 @@
 <body>
 <nav>
 <div>
-<select data-bind='options: computation.programs'></select>
-<button data-bind=''>Restart</button>
+<select data-bind='value: computation.program, options: computation.programs'></select>
+<select data-bind='value: computation.size, options: computation.sizes'></select>
+<button data-bind='click: restartComputation'>Restart</button>
 </div>
 <div>
 <select data-bind='value: display.program, options: display.programs'></select>

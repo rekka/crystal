@@ -30,8 +30,7 @@ var Solver = function (canvas) {
         component(self, gl);
     });
     
-    gl.viewport(0, 0, canvas.width, canvas.height);
- 
+    
     var PROGS_DESC = {
         'init':     {vs: 'flat-vs', fs: 'init'},
         'crystal':  {vs: 'flat-vs', fs: 'crystal'},
@@ -194,9 +193,12 @@ var Solver = function (canvas) {
         gl.drawArrays(gl.TRIANGLES, 0, 6);
     };
 
+    // restart simulation with new settings
     this.init = function(computation, display) {
         var self = this;
 
+        this.stopAnimation();
+        
         this.params.computation = $.extend({},
             {
                 size: 256,
@@ -218,6 +220,9 @@ var Solver = function (canvas) {
         
         self.initVtxBuffers();
         self.initTextureFramebuffer(n/2);
+    
+        gl.viewport(0, 0, n, n);
+
         self.initState();
 
         this.startAnimation();

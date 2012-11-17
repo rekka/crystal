@@ -41,6 +41,15 @@ $(function() {
                 program: ko.observable('stefan'),
                 programs: Object.keys(viewModel.computations),
             };
+            
+        viewModel.restartComputation = function () {
+                solver.init({
+                        size: viewModel.computation.size(),
+                        program: viewModel.computation.program(),
+                    }, 
+                    viewModel.display.params
+                );
+            };
         
         viewModel.display = {
                 program: ko.observable('onephase'),
