@@ -33,6 +33,7 @@ var Solver = function (canvas) {
     
     var PROGS_DESC = {
         'init':     {vs: 'compute-vs', fs: 'init'},
+        'dirichlet':     {vs: 'compute-vs', fs: 'init'},
         'crystal':  {vs: 'compute-vs', fs: 'crystal'},
         'stefan':   {vs: 'compute-vs', fs: 'stefan'},
         'onephase': {vs: 'flat-vs', fs: 'onephase'},
@@ -40,6 +41,7 @@ var Solver = function (canvas) {
     };
 
     progs = {};
+    // initialize programs
     $.each(PROGS_DESC, function (name, desc){
         progs[name] = new self.Program(name, Solver.shaderSources[desc.vs], Solver.shaderSources[desc.fs]);
     });
@@ -58,23 +60,22 @@ var Solver = function (canvas) {
         display: function () { return PARAMS_DISPLAY; }, // can change during computation
     };
     
-    this.recompileShaders = function () {   
-        var initSource = Solver.shaderSources[PROGS_DESC.init.fs];
-        var initFunc = this.params.computation.initFunc;
+    // compiles a shader where the fragment shader code contains a customCode part
+    this.compileCustomShader = function(programName, customCode) {
+        var desc = PROGS_DESC[programName];
+        var programSource = Solver.shaderSources[desc.fs];
 
-        if (initFunc) {
-            var source = initSource.source;
-            var split = source.split('/*CUSTOM*/');
-            split[1] = 'return ' + initFunc + ';';
-            source = split.join('');
+        var source = programSource.source;
+        var split = source.split('/*CUSTOM*/');
+        split[1] = 'return ' + customCode + ';';
+        source = split.join('');
 
-            initSource = {
-                file: 'custom-init',
-                source: source,
-            };
-        } 
+        var customSource = {
+            file: 'custom-' + programSource.file + ': ' + customCode,
+            source: source,
+        };
         
-        progs.init = new self.Program('init', Solver.shaderSources[PROGS_DESC.init.vs], initSource);
+        return new self.Program('custom-' + programName + ': ' + customCode, Solver.shaderSources[desc.vs], customSource);
     }
     
     this.status = {// observable status of the solver
@@ -144,9 +145,14 @@ var Solver = function (canvas) {
         }
     }
     
-    // set the initial condition
-    this.initState = function() {
-        var prog = progs.init;
+    // init a texture using a given shader and possibly a custom code
+    this.initTexture = function(programName, customCode, textureTarget) {
+        var prog = progs[programName];
+        
+        if (customCode) {
+            prog = this.compileCustomShader(programName, customCode);
+        }
+        
         prog.use({
             uTexSize: framebuffer.width,
             uTexStep: 1/framebuffer.width,
@@ -157,12 +163,12 @@ var Solver = function (canvas) {
         
         this.setFramebuffer(framebuffer);
         
-        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texSrc, 0);
+        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, textureTarget, 0);
         
         gl.drawArrays(gl.TRIANGLES, 0, 6);
         
         this.setFramebuffer(null);
-    };
+    }
 
     // run nSteps of the computation
     this.updateState = function(nSteps) {
@@ -247,7 +253,7 @@ var Solver = function (canvas) {
                 size: 256,
                 program: 'crystal',
                 uniforms: {},
-                initFunc: 'x*x + y*y',
+                initFunc: null,
             }, computation
         );
         
@@ -263,12 +269,13 @@ var Solver = function (canvas) {
         // canvas.height = n;
         // canvas.width = n;
         
-        self.recompileShaders();
+        //self.recompileShaders();
         
         self.initVtxBuffers();
         self.initTextureFramebuffer(n/2);
     
-        self.initState();
+        // self.initState();
+        self.initTexture('init', this.params.computation.initFunc, texSrc);
 
         this.startAnimation();
     };

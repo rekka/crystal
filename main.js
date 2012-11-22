@@ -92,7 +92,7 @@ $(function() {
         viewModel.computation = {
                 size: ko.observable(512),
                 program: ko.observable('stefan'),
-                initFunc: ko.observable('wrong'),
+                initFunc: ko.observable(null),
                 
                 sizes: [128, 256, 512, 1024, 2048],
                 programs: Object.keys(viewModel.computations),
