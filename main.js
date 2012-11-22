@@ -93,6 +93,7 @@ $(function() {
                 size: ko.observable(512),
                 program: ko.observable('stefan'),
                 initFunc: ko.observable(null),
+                dirichletCode: ko.observable('step(distance(vec2(x,y),vec2(0.,0.)),0.2)'),
                 
                 sizes: [128, 256, 512, 1024, 2048],
                 programs: Object.keys(viewModel.computations),
@@ -137,6 +138,7 @@ $(function() {
                             program: program,
                             uniforms: uniforms,
                             initFunc: viewModel.computation.initFunc(),
+                            dirichletFunc: viewModel.computation.dirichletCode(),
                         }, 
                         viewModel.display.params
                     );

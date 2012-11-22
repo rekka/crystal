@@ -7,6 +7,7 @@ var Solver = function (canvas) {
     var framebuffer;
     var texTgt;
     var texSrc;
+    var texDirichlet;
 
     var vtxPosBuffer;
     
@@ -90,14 +91,14 @@ var Solver = function (canvas) {
         },
     };
 
-    function createFloatTexture(size) {
+    function createRGBATexture(size, type) {
         var tex = gl.createTexture();
         gl.bindTexture(gl.TEXTURE_2D, tex);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT );
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT );
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, size, size, 0, gl.RGBA, gl.FLOAT, null);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, size, size, 0, gl.RGBA, type, null);
         gl.bindTexture(gl.TEXTURE_2D, null);
         
         return tex;
@@ -106,8 +107,9 @@ var Solver = function (canvas) {
     // initialize textures of size n
     this.initTextureFramebuffer = function(n) {
         // create storage textures
-        texTgt = createFloatTexture(n);
-        texSrc = createFloatTexture(n);
+        texTgt = createRGBATexture(n, gl.FLOAT);
+        texSrc = createRGBATexture(n, gl.FLOAT);
+        texDirichlet = createRGBATexture(n, gl.UNSIGNED_SHORT_4_4_4_4);
 
         // create framebuffer
         framebuffer = gl.createFramebuffer();
@@ -185,8 +187,12 @@ var Solver = function (canvas) {
         gl.bindBuffer(gl.ARRAY_BUFFER, vtxPosBuffer);
         gl.vertexAttribPointer(prog.attribLocation('aVertexPosition'), vtxPosBuffer.itemSize, gl.FLOAT, false, 0, 0);
         
+        gl.activeTexture(gl.TEXTURE1);
+        gl.bindTexture(gl.TEXTURE_2D, texDirichlet);
+        prog.setTexture('uDirichlet', 1); // texture on unit 1
+
         gl.activeTexture(gl.TEXTURE0);
-        gl.uniform1i(prog.uSampler, 0); // texture on unit 0
+        prog.setTexture('uSampler', 0); // texture on unit 0
 
         // output into the framebuffer
         this.setFramebuffer(framebuffer);
@@ -254,6 +260,7 @@ var Solver = function (canvas) {
                 program: 'crystal',
                 uniforms: {},
                 initFunc: null,
+                dirichletFunc: null,
             }, computation
         );
         
@@ -276,6 +283,7 @@ var Solver = function (canvas) {
     
         // self.initState();
         self.initTexture('init', this.params.computation.initFunc, texSrc);
+        self.initTexture('dirichlet', this.params.computation.dirichletFunc, texDirichlet);
 
         this.startAnimation();
     };
