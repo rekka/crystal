@@ -92,8 +92,9 @@ $(function() {
         viewModel.computation = {
                 size: ko.observable(512),
                 program: ko.observable('stefan'),
-                initFunc: ko.observable(null),
-                dirichletCode: ko.observable('step(distance(vec2(x,y),vec2(0.,0.)),0.2)'),
+                initFunc: ko.observable('max(min(1.05,1.45 - 4.*distance(vec2(x,y), vec2(0.,0.))),'+
+                                        '0.98 - pow(sin(x* 15.),6.0) * pow(sin(y* 15.),6.0))'),
+                dirichletCode: ko.observable('step(distance(vec2(x,y),vec2(0.,0.)),0.1)'),
                 
                 sizes: [128, 256, 512, 1024, 2048],
                 programs: Object.keys(viewModel.computations),
@@ -149,7 +150,7 @@ $(function() {
             };
         
         viewModel.display = {
-                program: ko.observable('onephase'),
+                program: ko.observable('twophase'),
                 programs: Object.keys(viewModel.displays),
                 light: ko.observable((new Vec3(-1,-1,1)).normalize()),
             };
@@ -171,12 +172,7 @@ $(function() {
         
         ko.applyBindings(viewModel);
 
-        solver.init({
-                size: 512,
-                program: 'stefan',
-            }, 
-            viewModel.display.params
-        );
+        viewModel.restartComputation();
 
         solver.toggleComputation(false);
         

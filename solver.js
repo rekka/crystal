@@ -243,6 +243,10 @@ var Solver = function (canvas) {
         gl.bindTexture(gl.TEXTURE_2D, texSrc);
         prog.setTexture('uSampler', 0);
         
+        gl.activeTexture(gl.TEXTURE1);
+        gl.bindTexture(gl.TEXTURE_2D, texDirichlet);
+        prog.setTexture('uDirichlet', 0);
+        
         gl.viewport(0, 0, w, h);
         
         gl.drawArrays(gl.TRIANGLES, 0, 6);
