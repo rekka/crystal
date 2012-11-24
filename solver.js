@@ -34,7 +34,7 @@ var Solver = function (canvas) {
     
     var PROGS_DESC = {
         'init':     {vs: 'compute-vs', fs: 'init'},
-        'dirichlet':     {vs: 'compute-vs', fs: 'init'},
+        'dirichlet':     {vs: 'compute-vs', fs: 'dirichlet'},
         'crystal':  {vs: 'compute-vs', fs: 'crystal'},
         'stefan':   {vs: 'compute-vs', fs: 'stefan'},
         'onephase': {vs: 'flat-vs', fs: 'onephase'},
@@ -379,6 +379,7 @@ Solver.shaderSources = {
     'compute-vs': {file: 'compute-vs'},
     // initial data shaders
     'init': {file: 'init-fs'},
+    'dirichlet': {file: 'dirichlet-fs'},
     // computation shaders
     'crystal': {file: 'crystal-fs'},
     'stefan': {file: 'stefan-fs'},

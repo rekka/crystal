@@ -12,6 +12,7 @@
 <script src="vector.js"></script>
 
 <script src="solver.js"></script>
+<script src="presets.js"></script>
 <script src="program.js"></script>
 <script src="main.js"></script>
 
@@ -24,17 +25,26 @@
 <h3>Computation</h3>
 <button id="start-stop" data-bind='text: (status.computation.running() ? "Stop" : "Start"), click: toggleComputation'></button>
 
+<h4>Presets</h4>
+<select data-bind='value: preset, options: presets, optionsText: "name", optionsCaption: "Select..."'></select>
+<button data-bind='click: loadPreset, enable: preset'>Load</button>
 <table class='params'>
 <tr>
-<td>Program:</td><td>
+<td>Program</td><td>
 <select data-bind='value: computation.program, options: computation.programs'></select>
 </td></tr>
-<tr><td>Mesh size:</td><td>
+<tr><td>Mesh size</td><td>
 <select data-bind='value: computation.size, options: computation.sizes'></select>
+</td></tr>
+<tr><td>Init code</td><td>
+<textarea data-bind='value: computation.initFunc'></textarea>
+</td></tr>
+<tr><td>Dirichlet</td><td>
+<textarea data-bind='value: computation.dirichletFunc'></textarea>
 </td></tr>
 </table>
 
-<textarea data-bind='value: computation.initFunc'></textarea>
+
 
 <table class='params' data-bind='if: computation.uniformsArray().length > 0'>
   <thead>
@@ -63,7 +73,7 @@
 
 <section>
 <h3>Info</h3>
-<table data-bind='foreach: statusTable'>
+<table class='params' data-bind='foreach: statusTable'>
 <tr><td data-bind='text: name'></td><td data-bind='text: value'></td></tr>
 </table>
 </section>
@@ -71,6 +81,10 @@
 
 <div>
 <canvas id="main-canvas" width="512" height="512"></canvas>
+</div>
+
+<div>
+<textarea data-bind='value: computationJSON'></textarea>
 </div>
 </body>
 </html>

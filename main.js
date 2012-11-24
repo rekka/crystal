@@ -50,6 +50,155 @@ ko.extenders.numeric = function(target, range) {
     return computed;
 };
 
+var ViewModel = function (solver, canvas) {
+    var self = this;
+    
+    self.presets = Solver.presets;
+    
+    self.preset = ko.observable();
+    
+    self.computations = {
+        'crystal': {
+                epsilon: ko.observable(0.0001).extend({numeric: {min: 0.000001, max: 1.0}}),
+            },
+        'stefan': {},
+    };
+    
+    self.displays = {
+        'onephase': {},
+        'twophase': {},
+    };
+    
+    self.status = solver.status;
+    
+    self.toggleComputation = function() { solver.toggleComputation(); };
+        
+    self.computation = {
+            size: ko.observable(512),
+            program: ko.observable('stefan'),
+            initFunc: ko.observable(),
+            dirichletFunc: ko.observable(),
+            
+            sizes: [128, 256, 512, 1024, 2048],
+            programs: Object.keys(self.computations),
+        };
+        
+    self.computation.uniforms = ko.computed(function () { return self.computations[self.computation.program()]; });
+    self.computation.uniformsArray = ko.computed(function () {
+            var a = [];
+            $.each(self.computation.uniforms(), function (name, value) {
+                a.push({name: name, value: value});
+            });
+            return a;
+        });
+        
+    self.computation.hasError = ko.computed(function() {
+        var params = self.computations[self.computation.program()];
+        var hasError = null;
+        $.each(params, function (name, observable) {
+            if (!hasError && observable.hasError) {
+                var err = observable.hasError();
+                if (err) {
+                    hasError = name + ': ' + err;
+                }
+            }
+        });
+        return hasError;            
+    });
+        
+    self.restartComputation = function () {
+            
+            var size = self.computation.size();
+            
+            var canvassize = Math.max(512, size);
+            
+            canvas.width = canvassize;
+            canvas.height = canvassize;
+            
+            try {
+                solver.init(
+                    self.computationToJS(), 
+                    self.display.params
+                );
+            }
+            catch (e) {
+                alert(e);
+            }
+        };
+    
+    self.display = {
+            program: ko.observable('twophase'),
+            programs: Object.keys(self.displays),
+            light: ko.observable((new Vec3(-1,-1,1)).normalize()),
+        };
+
+    self.display.params = ko.computed(function () {
+            var p = {};
+            p.program = self.display.program();
+            p.uniforms = {
+                light: self.display.light().normalize(),
+            };
+            return p;
+        });
+    
+    self.statusTable = [
+        {name: 'nStep', value: solver.status.computation.nStep},
+        {name: 'FPS', value: ko.computed(function () { return solver.status.display.fps().toFixed(1);}) },
+        {name: 'steps/s', value: ko.computed(function () {
+                            if (solver.status.computation.running()) {
+                                return solver.status.computation.nStepsPerSec().toFixed(0);
+                            }
+                            return 'N/A';
+                        })
+        },
+    ];
+    
+    // store computation parameters as a JS object
+    self.computationToJS = function () {
+        var program =  self.computation.program();
+        
+        var data = {
+            program: program,
+            size: self.computation.size(),
+            uniforms: ko.toJS(self.computations[program]),
+            initFunc: self.computation.initFunc(),
+            dirichletFunc: self.computation.dirichletFunc(),
+        }
+        
+        return data;
+    };
+    
+    // set computation parameters based on the data
+    self.computationFromJS = function (data) {
+        ['program','size','initFunc','dirichletFunc'].forEach(function (item) {
+            self.computation[item](data[item]);
+        });
+        
+        var uo = self.computations[data.program];
+        
+        $.each(data.uniforms, function (name, value) {
+                uo[name](value);
+        });
+    };
+    
+    self.computationJSON = ko.computed(function () {
+        return JSON.stringify(self.computationToJS());
+    });
+    
+    self.loadPreset = function () {
+        self.computationFromJS(self.preset().data);
+        self.restartComputation();
+    };
+    
+    self.computationFromJS({
+            program: 'stefan',
+            size: 512,
+            initFunc: null,
+            dirichletFunc: null,
+            uniforms: {},
+        });
+}
+
 $(function() {
     
     
@@ -70,105 +219,7 @@ $(function() {
         var canvas = document.getElementById('main-canvas');
         var solver = new Solver(canvas);
         
-        var viewModel = {
-            computations: {
-                'crystal': {
-                        epsilon: ko.observable(0.0001).extend({numeric: {min: 0.000001, max: 1.0}}),
-                    },
-                'stefan': {},
-            },
-            
-            displays: {
-                'onephase': {},
-                'twophase': {},
-            },
-            
-            status: solver.status,
-            
-            toggleComputation: function() { solver.toggleComputation(); },
-        };
-            
-        
-        viewModel.computation = {
-                size: ko.observable(512),
-                program: ko.observable('stefan'),
-                initFunc: ko.observable('max(min(1.05,1.45 - 4.*distance(vec2(x,y), vec2(0.,0.))),'+
-                                        '0.98 - pow(sin(x* 15.),6.0) * pow(sin(y* 15.),6.0))'),
-                dirichletCode: ko.observable('step(distance(vec2(x,y),vec2(0.,0.)),0.1)'),
-                
-                sizes: [128, 256, 512, 1024, 2048],
-                programs: Object.keys(viewModel.computations),
-            };
-        
-        viewModel.computation.uniforms = ko.computed(function () { return viewModel.computations[viewModel.computation.program()]; }),
-        viewModel.computation.uniformsArray = ko.computed(function () {
-                var a = [];
-                $.each(viewModel.computation.uniforms(), function (name, value) {
-                    a.push({name: name, value: value});
-                });
-                return a;
-            }),
-        viewModel.computation.hasError = ko.computed(function() {
-            var params = viewModel.computations[viewModel.computation.program()];
-            var hasError = null;
-            $.each(params, function (name, observable) {
-                if (!hasError && observable.hasError) {
-                    var err = observable.hasError();
-                    if (err) {
-                        hasError = name + ': ' + err;
-                    }
-                }
-            });
-            return hasError;            
-        });
-            
-        viewModel.restartComputation = function () {
-                
-                var program = viewModel.computation.program();
-                var uniforms = ko.toJS(viewModel.computations[program]);
-                var size = viewModel.computation.size();
-                
-                var canvassize = Math.max(512, size);
-                
-                canvas.width = canvassize;
-                canvas.height = canvassize;
-                
-                try {
-                    solver.init({
-                            size: size,
-                            program: program,
-                            uniforms: uniforms,
-                            initFunc: viewModel.computation.initFunc(),
-                            dirichletFunc: viewModel.computation.dirichletCode(),
-                        }, 
-                        viewModel.display.params
-                    );
-                }
-                catch (e) {
-                    alert(e);
-                }
-            };
-        
-        viewModel.display = {
-                program: ko.observable('twophase'),
-                programs: Object.keys(viewModel.displays),
-                light: ko.observable((new Vec3(-1,-1,1)).normalize()),
-            };
-
-        viewModel.display.params = ko.computed(function () {
-                var p = {};
-                p.program = this.display.program();
-                p.uniforms = {
-                    light: this.display.light().normalize(),
-                };
-                return p;
-            }, viewModel),
-        
-        viewModel.statusTable = [
-            {name: 'nStep', value: solver.status.computation.nStep},
-            {name: 'FPS', value: ko.computed(function () { return solver.status.display.fps().toFixed(1);}) },
-            {name: 'steps/s', value: ko.computed(function () { return solver.status.computation.nStepsPerSec().toFixed(0);}) },
-            ]
+        var viewModel = new ViewModel(solver, canvas);
         
         ko.applyBindings(viewModel);
 

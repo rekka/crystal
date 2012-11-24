@@ -4,8 +4,9 @@ body {
 
 nav {
     width: 200px;
-    border: 1px black solid;
-    float: right;
+    border: 1px gray solid;
+    float: left;
+    padding: 10px;
 }
 
 table.params {
