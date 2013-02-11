@@ -22,6 +22,54 @@ Solver.presets = [
             uniforms: {},
         }
     }, 
+
+    {
+        name: 'homogenization 1/2',
+        data: {
+            program: 'stefan',
+            size: 512,
+            initFunc: 'max(min(1.05,1.45 - 4.*distance(vec2(x,y), vec2(0.,0.))),'+
+                                    '0.98 - pow(sin(x* 30.),6.0) * pow(sin(y* 30.),6.0))',
+            dirichletFunc: 'step(distance(vec2(x,y),vec2(0.,0.)),0.1)',
+            uniforms: {},
+        }
+    }, 
+    
+    {
+        name: 'homogenization 1/4',
+        data: {
+            program: 'stefan',
+            size: 512,
+            initFunc: 'max(min(1.05,1.45 - 4.*distance(vec2(x,y), vec2(0.,0.))),'+
+                                    '0.98 - pow(sin(x* 60.),6.0) * pow(sin(y* 60.),6.0))',
+            dirichletFunc: 'step(distance(vec2(x,y),vec2(0.,0.)),0.1)',
+            uniforms: {},
+        }
+    }, 
+    
+    {
+        name: 'homogeneous',
+        data: {
+            program: 'stefan',
+            size: 512,
+            initFunc: 'max(min(1.05,1.45 - 4.*distance(vec2(x,y), vec2(0.,0.))),'+
+                                    '0.98)',
+            dirichletFunc: 'step(distance(vec2(x,y),vec2(0.,0.)),0.1)',
+            uniforms: {},
+        }
+    }, 
+    
+    {
+        name: 'vertical homogenization 1/2',
+        data: {
+            program: 'stefan',
+            size: 512,
+            initFunc: 'max(min(1.05,1.45 - 4.*distance(vec2(x,y), vec2(0.,0.))),'+
+                                    '0.98 - 0.5*pow(sin(x* 30.),6.0))',
+            dirichletFunc: 'step(distance(vec2(x,y),vec2(0.,0.)),0.1)',
+            uniforms: {},
+        }
+    }, 
     
     {
         name: 'facet breaking',
