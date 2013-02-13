@@ -85,5 +85,10 @@ Solver.presets = [
     {
         name: 'flat homogenization',
         data: {"program":"stefan","size":512,"uniforms":{},"initFunc":"max(min(1.05,1.+5.*(-y-0.8)),0.98 *(1. - pow(sin(x* pi*5.),6.0) * pow(sin(y* pi*5.),6.0)))","dirichletFunc":"step(0.,5.*(-y-0.8)-0.05)+step(0.95,y)"}
+    },
+    
+    {
+        name: 'flat homogenization - vertical',
+        data: {"program":"stefan","size":512,"uniforms":{},"initFunc":"max(min(1.05,1.+5.*(-y-0.8)),0.98 *(1. - 0.3* pow(sin(x* pi*5.),6.0)))","dirichletFunc":"step(0.,5.*(-y-0.8)-0.05)+step(0.95,y)"}
     }
 ]
