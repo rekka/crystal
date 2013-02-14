@@ -36,6 +36,7 @@ var Solver = function (canvas) {
         'init':     {vs: 'compute-vs', fs: 'init'},
         'dirichlet':     {vs: 'compute-vs', fs: 'dirichlet'},
         'crystal':  {vs: 'compute-vs', fs: 'crystal'},
+        'square-crystal':  {vs: 'compute-vs', fs: 'square-crystal'},
         'stefan':   {vs: 'compute-vs', fs: 'stefan'},
         'onephase': {vs: 'flat-vs', fs: 'onephase'},
         'twophase': {vs: 'flat-vs', fs: 'twophase'},
@@ -382,6 +383,7 @@ Solver.shaderSources = {
     'dirichlet': {file: 'dirichlet-fs'},
     // computation shaders
     'crystal': {file: 'crystal-fs'},
+    'square-crystal': {file: 'square-crystal-fs'},
     'stefan': {file: 'stefan-fs'},
     // draw shaders
     'onephase': {file: 'flat-fs'},

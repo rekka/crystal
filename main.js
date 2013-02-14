@@ -61,6 +61,9 @@ var ViewModel = function (solver, canvas) {
         'crystal': {
                 epsilon: ko.observable(0.0001).extend({numeric: {min: 0.000001, max: 1.0}}),
             },
+        'square-crystal': {
+                epsilon: ko.observable(0.0001).extend({numeric: {min: 0.000001, max: 1.0}}),
+            },
         'stefan': {},
     };
     
