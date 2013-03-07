@@ -189,8 +189,10 @@ var ViewModel = function (solver, canvas) {
     });
     
     self.loadPreset = function () {
-        self.computationFromJS(self.preset().data);
-        self.restartComputation();
+        if (self.preset()) {
+            self.computationFromJS(self.preset().data);
+            self.restartComputation();
+        }
     };
     
     self.computationFromJS({
