@@ -398,7 +398,7 @@ Solver.loadShaders = function(data, ready) {
 
         $.ajax({
             mimeType: 'text/plain; charset=x-user-defined',
-            url:         desc.file + '.c',
+            url:         'shader/' + desc.file + '.c',
             type:        'GET',
             dataType:    'text',
             cache:       false,
