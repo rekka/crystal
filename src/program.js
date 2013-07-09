@@ -11,9 +11,6 @@ Solver.components.push(function (solver, gl) {
                     '#version 100',
                     'precision highp int;',
                     'precision highp float;',
-                    'precision highp vec2;',
-                    'precision highp vec3;',
-                    'precision highp vec4;',
                 ].join('\n');
         
         gl.shaderSource(shader, directives + '\n' + source);
